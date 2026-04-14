@@ -1,0 +1,5 @@
+$kind: http-request
+name: Crear post
+url: https://jsonplaceholder.typicode.com/posts
+method: POST
+order: 4447113911126930

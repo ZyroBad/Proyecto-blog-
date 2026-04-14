@@ -1,0 +1,5 @@
+$kind: http-request
+name: Actualizar post
+url: https://jsonplaceholder.typicode.com/posts/1
+method: PUT
+order: 4485400751358738

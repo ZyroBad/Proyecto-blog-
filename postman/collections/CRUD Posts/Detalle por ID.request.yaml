@@ -1,0 +1,5 @@
+$kind: http-request
+name: Detalle por ID
+url: https://jsonplaceholder.typicode.com/posts/1
+method: GET
+order: 4092046492262518
