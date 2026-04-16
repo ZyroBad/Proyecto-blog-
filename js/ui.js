@@ -4,26 +4,31 @@
 
 // Mostrar loading
 function showLoading(container) {
+    if (!container) return;
     container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando publicaciones...</p></div>';
 }
 
 // Mostrar error
 function showError(container, message) {
+    if (!container) return;
     container.innerHTML = `<div class="alert alert-error">❌ ${message}</div>`;
 }
 
 // Mostrar mensaje de éxito (temporal)
 function showSuccess(message, duration = 3000) {
+    const app = document.getElementById('app');
+    if (!app) return;
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-success';
     alertDiv.textContent = `✅ ${message}`;
-    const app = document.getElementById('app');
     app.insertBefore(alertDiv, app.firstChild);
     setTimeout(() => alertDiv.remove(), duration);
 }
 
 // Renderizar listado de posts
 function renderPosts(posts, container, onViewDetail) {
+    if (!container) return;
+
     if (!posts || posts.length === 0) {
         container.innerHTML = '<div class="alert alert-info">📭 No hay publicaciones disponibles</div>';
         return;
@@ -53,8 +58,14 @@ function renderPosts(posts, container, onViewDetail) {
     });
 }
 
-// Renderizar detalle de un post
-function renderPostDetail(post, container, onEdit, onDelete, onBack) {
+// Renderizar detalle de un post (VERSIÓN CORREGIDA)
+function renderPostDetail(container, post, onEdit, onDelete, onBack) {
+    // Verificar que container sea un elemento válido
+    if (!container || typeof container.querySelector !== 'function') {
+        console.error('renderPostDetail: container no válido', container);
+        return;
+    }
+    
     container.innerHTML = `
         <div class="detail-view">
             <button class="btn btn-outline btn-back">← Volver al listado</button>
@@ -68,13 +79,19 @@ function renderPostDetail(post, container, onEdit, onDelete, onBack) {
         </div>
     `;
     
-    container.querySelector('.btn-back').addEventListener('click', onBack);
-    container.querySelector('.edit-post').addEventListener('click', () => onEdit(post));
-    container.querySelector('.delete-post').addEventListener('click', () => onDelete(post.id));
+    const backBtn = container.querySelector('.btn-back');
+    const editBtn = container.querySelector('.edit-post');
+    const deleteBtn = container.querySelector('.delete-post');
+    
+    if (backBtn) backBtn.addEventListener('click', onBack);
+    if (editBtn) editBtn.addEventListener('click', () => onEdit(post));
+    if (deleteBtn) deleteBtn.addEventListener('click', () => onDelete(post.id));
 }
 
 // Renderizar formulario de creación/edición
 function renderPostForm(post = null, container, onSave, onCancel) {
+    if (!container) return;
+    
     const isEditing = post !== null;
     const title = isEditing ? post.title : '';
     const body = isEditing ? post.body : '';
@@ -105,21 +122,27 @@ function renderPostForm(post = null, container, onSave, onCancel) {
     `;
     
     const form = document.getElementById('post-form');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = {
-            title: document.getElementById('title').value,
-            body: document.getElementById('body').value,
-            userId: parseInt(document.getElementById('userId').value),
-        };
-        onSave(formData);
-    });
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                title: document.getElementById('title').value,
+                body: document.getElementById('body').value,
+                userId: parseInt(document.getElementById('userId').value),
+            };
+            onSave(formData);
+        });
+    }
     
-    container.querySelector('.btn-cancel').addEventListener('click', onCancel);
+    const cancelBtn = container.querySelector('.btn-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
 }
 
 // Renderizar barra de filtros y paginación
 function renderFiltersAndPagination(totalPages, currentPage, onFilterChange, onPageChange, onSearch) {
+    const app = document.getElementById('app');
+    if (!app) return null;
+    
     const filtersHTML = `
         <div class="filters-bar">
             <input type="text" id="search-input" placeholder="🔍 Buscar por título o contenido..." autocomplete="off">
@@ -151,15 +174,20 @@ function renderFiltersAndPagination(totalPages, currentPage, onFilterChange, onP
         </div>
     `;
     
-    const app = document.getElementById('app');
     app.innerHTML = filtersHTML;
     
     // Event listeners
-    document.getElementById('search-input').addEventListener('input', (e) => onSearch(e.target.value));
-    document.getElementById('author-filter').addEventListener('change', (e) => onFilterChange('author', e.target.value));
-    document.getElementById('tag-filter').addEventListener('change', (e) => onFilterChange('tag', e.target.value));
-    document.getElementById('prev-page').addEventListener('click', () => onPageChange(currentPage - 1));
-    document.getElementById('next-page').addEventListener('click', () => onPageChange(currentPage + 1));
+    const searchInput = document.getElementById('search-input');
+    const authorFilter = document.getElementById('author-filter');
+    const tagFilter = document.getElementById('tag-filter');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    
+    if (searchInput) searchInput.addEventListener('input', (e) => onSearch(e.target.value));
+    if (authorFilter) authorFilter.addEventListener('change', (e) => onFilterChange('author', e.target.value));
+    if (tagFilter) tagFilter.addEventListener('change', (e) => onFilterChange('tag', e.target.value));
+    if (prevBtn) prevBtn.addEventListener('click', () => onPageChange(currentPage - 1));
+    if (nextBtn) nextBtn.addEventListener('click', () => onPageChange(currentPage + 1));
     
     return document.getElementById('posts-container');
 }

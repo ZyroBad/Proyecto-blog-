@@ -14,25 +14,30 @@ let postsContainer = null;
 
 // Inicializar la aplicación
 async function init() {
+    console.log('=== INICIANDO APLICACIÓN ===');
     setupNavigation();
     await loadAndRenderPosts();
 }
 
 // Configurar navegación
 function setupNavigation() {
-    document.getElementById('nav-home').addEventListener('click', () => navigateToHome());
-    document.getElementById('nav-create').addEventListener('click', () => navigateToCreate());
+    const homeBtn = document.getElementById('nav-home');
+    const createBtn = document.getElementById('nav-create');
+    if (homeBtn) homeBtn.addEventListener('click', () => navigateToHome());
+    if (createBtn) createBtn.addEventListener('click', () => navigateToCreate());
 }
 
 // Cargar todos los posts (para filtros)
 async function loadAllPostsForFilters() {
     try {
-        allPosts = await getAllPosts();
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        allPosts = await response.json();
+        console.log('Posts cargados desde API:', allPosts.length);
         applyFilters();
     } catch (error) {
         console.error('Error loading posts:', error);
         const app = document.getElementById('app');
-        showError(app, 'No se pudieron cargar las publicaciones. Intenta más tarde.');
+        if (app) showError(app, 'No se pudieron cargar las publicaciones. Intenta más tarde.');
     }
 }
 
@@ -40,7 +45,6 @@ async function loadAllPostsForFilters() {
 function applyFilters() {
     let filtered = [...allPosts];
 
-    // Filtro por búsqueda (título o contenido)
     if (currentSearch) {
         const searchLower = currentSearch.toLowerCase();
         filtered = filtered.filter(post =>
@@ -49,12 +53,10 @@ function applyFilters() {
         );
     }
 
-    // Filtro por autor (userId)
     if (currentAuthorFilter) {
         filtered = filtered.filter(post => post.userId === parseInt(currentAuthorFilter));
     }
 
-    // Filtro por categoría/tag (simulado)
     if (currentTagFilter) {
         const tag = parseInt(currentTagFilter);
         if (tag === 1) {
@@ -83,7 +85,6 @@ function renderCurrentPage() {
 
     renderPosts(pagePosts, postsContainer, (id) => navigateToDetail(id));
 
-    // Actualizar paginación
     const paginationDiv = document.getElementById('pagination');
     if (paginationDiv) {
         const prevBtn = document.getElementById('prev-page');
@@ -98,7 +99,7 @@ function renderCurrentPage() {
 // Cargar y renderizar posts con filtros
 async function loadAndRenderPosts() {
     const app = document.getElementById('app');
-    showLoading(app);
+    if (app) showLoading(app);
 
     try {
         await loadAllPostsForFilters();
@@ -130,30 +131,47 @@ async function loadAndRenderPosts() {
         renderCurrentPage();
     } catch (error) {
         console.error('Error:', error);
-        showError(app, 'Error al cargar las publicaciones');
+        if (app) showError(app, 'Error al cargar las publicaciones');
     }
 }
 
 // Cargar y renderizar detalle
 async function loadAndRenderDetail(postId) {
+    console.log('loadAndRenderDetail llamado con ID:', postId);
     const app = document.getElementById('app');
+    if (!app) return;
+
     showLoading(app);
 
     try {
-        const post = await getPostById(postId);
+        const url = `https://jsonplaceholder.typicode.com/posts/${postId}`;
+        console.log('Fetching URL:', url);
+
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: No se encontró el post ${postId}`);
+        }
+
+        const post = await response.json();
+        console.log('Post cargado:', post);
+
         renderPostDetail(app, post,
             (postData) => navigateToEdit(postData),
             async(id) => {
                 if (confirm('¿Estás seguro de que querés eliminar esta publicación?')) {
                     try {
-                        await deletePost(id);
+                        const deleteResponse = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`, {
+                            method: 'DELETE'
+                        });
 
-                        // Eliminar localmente
-                        allPosts = allPosts.filter(p => p.id !== id);
-                        applyFilters();
-
-                        showSuccess('Publicación eliminada correctamente');
-                        navigateToHome();
+                        if (deleteResponse.ok) {
+                            showSuccess('Publicación eliminada correctamente');
+                            navigateToHome();
+                        } else {
+                            throw new Error('Error al eliminar');
+                        }
                     } catch (error) {
                         showError(app, 'Error al eliminar la publicación');
                     }
@@ -162,13 +180,17 @@ async function loadAndRenderDetail(postId) {
             () => navigateToHome()
         );
     } catch (error) {
-        showError(app, 'No se pudo cargar el detalle de la publicación');
+        console.error('Error detallado en loadAndRenderDetail:', error);
+        showError(app, `No se pudo cargar el detalle del post ${postId}. Error: ${error.message}`);
+        setTimeout(() => navigateToHome(), 2000);
     }
 }
 
 // Renderizar formulario de creación
 function renderCreateForm() {
     const app = document.getElementById('app');
+    if (!app) return;
+
     renderPostForm(null, app, async(formData) => {
         const validation = validatePostForm(formData.title, formData.body, formData.userId);
         if (!validation.valid) {
@@ -177,27 +199,15 @@ function renderCreateForm() {
         }
 
         try {
-            // Llamar a la API
-            await createPost({
-                title: formData.title,
-                body: formData.body,
-                userId: formData.userId,
+            await fetch('https://jsonplaceholder.typicode.com/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: formData.title,
+                    body: formData.body,
+                    userId: formData.userId
+                })
             });
-
-            // Generar ID local incremental
-            const localId = Math.max(...allPosts.map(p => p.id), 0) + 1;
-
-            // Crear post local
-            const localPost = {
-                id: localId,
-                title: formData.title,
-                body: formData.body,
-                userId: formData.userId,
-            };
-
-            // Agregar a las listas locales
-            allPosts.unshift(localPost);
-            applyFilters();
 
             showSuccess('¡Publicación creada exitosamente!');
             navigateToHome();
@@ -210,6 +220,8 @@ function renderCreateForm() {
 // Renderizar formulario de edición
 function renderEditForm(post) {
     const app = document.getElementById('app');
+    if (!app) return;
+
     renderPostForm(post, app, async(formData) => {
         const validation = validatePostForm(formData.title, formData.body, formData.userId);
         if (!validation.valid) {
@@ -218,27 +230,23 @@ function renderEditForm(post) {
         }
 
         try {
-            // Llamar a la API
-            await updatePost(post.id, {
-                title: formData.title,
-                body: formData.body,
-                userId: formData.userId,
-            });
-
-            // Actualizar localmente
-            const index = allPosts.findIndex(p => p.id === post.id);
-            if (index !== -1) {
-                allPosts[index] = {
-                    ...allPosts[index],
+            const response = await fetch(`https://jsonplaceholder.typicode.com/posts/${post.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: post.id,
                     title: formData.title,
                     body: formData.body,
-                    userId: formData.userId,
-                };
-            }
+                    userId: formData.userId
+                })
+            });
 
-            applyFilters();
-            showSuccess('¡Publicación actualizada exitosamente!');
-            navigateToHome();
+            if (response.ok) {
+                showSuccess('¡Publicación actualizada exitosamente!');
+                navigateToHome();
+            } else {
+                throw new Error('Error al actualizar');
+            }
         } catch (error) {
             showError(app, 'Error al actualizar la publicación');
         }
