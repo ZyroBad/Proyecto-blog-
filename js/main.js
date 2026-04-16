@@ -69,6 +69,7 @@ function applyFilters() {
     filteredPosts = filtered;
     totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
     if (currentPage > totalPages) currentPage = 1;
+    if (totalPages === 0) totalPages = 1;
 
     renderCurrentPage();
 }
@@ -146,6 +147,11 @@ async function loadAndRenderDetail(postId) {
                 if (confirm('¿Estás seguro de que querés eliminar esta publicación?')) {
                     try {
                         await deletePost(id);
+
+                        // Eliminar localmente
+                        allPosts = allPosts.filter(p => p.id !== id);
+                        applyFilters();
+
                         showSuccess('Publicación eliminada correctamente');
                         navigateToHome();
                     } catch (error) {
@@ -171,11 +177,28 @@ function renderCreateForm() {
         }
 
         try {
-            const newPost = await createPost({
+            // Llamar a la API
+            await createPost({
                 title: formData.title,
                 body: formData.body,
                 userId: formData.userId,
             });
+
+            // Generar ID local incremental
+            const localId = Math.max(...allPosts.map(p => p.id), 0) + 1;
+
+            // Crear post local
+            const localPost = {
+                id: localId,
+                title: formData.title,
+                body: formData.body,
+                userId: formData.userId,
+            };
+
+            // Agregar a las listas locales
+            allPosts.unshift(localPost);
+            applyFilters();
+
             showSuccess('¡Publicación creada exitosamente!');
             navigateToHome();
         } catch (error) {
@@ -195,11 +218,25 @@ function renderEditForm(post) {
         }
 
         try {
-            const updatedPost = await updatePost(post.id, {
+            // Llamar a la API
+            await updatePost(post.id, {
                 title: formData.title,
                 body: formData.body,
                 userId: formData.userId,
             });
+
+            // Actualizar localmente
+            const index = allPosts.findIndex(p => p.id === post.id);
+            if (index !== -1) {
+                allPosts[index] = {
+                    ...allPosts[index],
+                    title: formData.title,
+                    body: formData.body,
+                    userId: formData.userId,
+                };
+            }
+
+            applyFilters();
             showSuccess('¡Publicación actualizada exitosamente!');
             navigateToHome();
         } catch (error) {
