@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Blog - CRUD con API</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <h1>Mi Blog</h1>
+            <div>
+                <button id="nav-home">Inicio</button>
+                <button id="nav-create">Nuevo Post</button>
+            </div>
+        </nav>
+    </header>
+
+    <main id="app">
+        <!-- Aquí se renderizarán las vistas dinámicamente -->
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/validation.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
